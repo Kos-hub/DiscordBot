@@ -2,6 +2,7 @@ package main
 
 import (
 	ctx "discordbot/context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -12,7 +13,10 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-var Token string
+var (
+	Token string
+	b     ctx.Bot
+)
 
 // Arguments that are passed in when calling go-run
 func init() {
@@ -30,13 +34,16 @@ func main() {
 	}
 
 	// Event handlers.
-
 	b.Session.AddHandler(handleInteraction)
 
 	commands := []*discordgo.ApplicationCommand{
 		{
 			Name:        "ping",
 			Description: "Ping!",
+		},
+		{
+			Name:        "pong",
+			Description: "Pong!",
 		},
 	}
 	// Discord API flags.
@@ -72,7 +79,29 @@ func handleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "Joining voice channel...",
+				Content: "Joined Channel.",
+			},
+		})
+
+		if err != nil {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Error: " + err.Error(),
+				},
+			})
+
+			return
+		}
+	}
+
+	if i.ApplicationCommandData().Name == "pong" {
+		err := leaveVoiceChannel()
+
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Left Channel",
 			},
 		})
 
@@ -90,6 +119,18 @@ func handleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 }
 
+func leaveVoiceChannel() error {
+
+	if b.VoiceConnection == nil {
+		return errors.New("not in a voice channel")
+	}
+
+	b.VoiceConnection.Disconnect()
+
+	b.VoiceConnection = nil // clean-up the pointer to the voice connection
+	return nil
+}
+
 func joinUserVoiceChannel(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	gID := i.GuildID
 	userID := i.Member.User.ID
@@ -100,10 +141,11 @@ func joinUserVoiceChannel(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	}
 
 	if voiceState == nil || voiceState.ChannelID == "" {
-		return fmt.Errorf("you need to be in a voice channel for me to join!")
+		return fmt.Errorf("you need to be in a voice channel for me to join")
 	}
 
-	_, err = s.ChannelVoiceJoin(gID, voiceState.ChannelID, false, true)
+	vc, err := s.ChannelVoiceJoin(gID, voiceState.ChannelID, false, true)
+	b.VoiceConnection = vc
 	if err != nil {
 		return fmt.Errorf("failed to join voice channel: %v", err)
 	}
