@@ -1,10 +1,6 @@
 [
     {
-        "Name": "ping",
-        "Description": "Ping!"
-    },
-    {
-        "Name": "pong",
-        "Description": "Pong!"
+        "Name": "join",
+        "Description": "Use this to make me join a channel"
     }
 ]

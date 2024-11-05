@@ -1,10 +1,10 @@
 package main
 
 import (
+	"discordbot/commands"
 	ctx "discordbot/context"
 	"errors"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -15,7 +15,7 @@ import (
 
 var (
 	Token string
-	b     ctx.Bot
+	b     *ctx.Bot
 )
 
 // Arguments that are passed in when calling go-run
@@ -33,6 +33,8 @@ func main() {
 		return
 	}
 
+	commands.RegisterCommands(b)
+
 	// Event handlers.
 	b.Session.AddHandler(handleInteraction)
 
@@ -41,6 +43,9 @@ func main() {
 
 	log.Println("Bot is running. Press CTRL-C to exit.")
 
+	if b != nil {
+		log.Println("Bot is not null at this point.")
+	}
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-stop
@@ -50,49 +55,62 @@ func main() {
 }
 
 func handleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	//
+	//	if i.ApplicationCommandData().Name == "ping" {
+	//		err := joinUserVoiceChannel(s, i)
+	//
+	//		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	//			Type: discordgo.InteractionResponseChannelMessageWithSource,
+	//			Data: &discordgo.InteractionResponseData{
+	//				Content: "Joined Channel",
+	//			},
+	//		})
+	//
+	//		if err != nil {
+	//			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	//				Type: discordgo.InteractionResponseChannelMessageWithSource,
+	//				Data: &discordgo.InteractionResponseData{
+	//					Content: "Error: " + err.Error(),
+	//				},
+	//			})
+	//
+	//			return
+	//		}
+	//	}
+	//
+	//	if i.ApplicationCommandData().Name == "pong" {
+	//		err := leaveVoiceChannel()
+	//
+	//		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	//			Type: discordgo.InteractionResponseChannelMessageWithSource,
+	//			Data: &discordgo.InteractionResponseData{
+	//				Content: "Left Channel",
+	//			},
+	//		})
+	//
+	//		if err != nil {
+	//			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	//				Type: discordgo.InteractionResponseChannelMessageWithSource,
+	//				Data: &discordgo.InteractionResponseData{
+	//					Content: "Error: " + err.Error(),
+	//				},
+	//			})
+	//
+	//			return
+	//		}
+	//	}
 
-	if i.ApplicationCommandData().Name == "ping" {
-		err := joinUserVoiceChannel(s, i)
+	value, exists := commands.Interactions[i.ApplicationCommandData().Name]
 
+	if !exists {
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "Joined Channel",
+				Content: "Command doesn't exist",
 			},
 		})
-
-		if err != nil {
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "Error: " + err.Error(),
-				},
-			})
-
-			return
-		}
-	}
-
-	if i.ApplicationCommandData().Name == "pong" {
-		err := leaveVoiceChannel()
-
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Left Channel",
-			},
-		})
-
-		if err != nil {
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "Error: " + err.Error(),
-				},
-			})
-
-			return
-		}
+	} else {
+		value(i)
 	}
 
 }
@@ -106,27 +124,5 @@ func leaveVoiceChannel() error {
 	b.VoiceConnection.Disconnect()
 
 	b.VoiceConnection = nil // clean-up the pointer to the voice connection
-	return nil
-}
-
-func joinUserVoiceChannel(s *discordgo.Session, i *discordgo.InteractionCreate) error {
-	gID := i.GuildID
-	userID := i.Member.User.ID
-
-	voiceState, err := s.State.VoiceState(gID, userID)
-	if err != nil {
-		return fmt.Errorf("could not retrieve voice: %v", err)
-	}
-
-	if voiceState == nil || voiceState.ChannelID == "" {
-		return fmt.Errorf("you need to be in a voice channel for me to join")
-	}
-
-	vc, err := s.ChannelVoiceJoin(gID, voiceState.ChannelID, false, true)
-	b.VoiceConnection = vc
-	if err != nil {
-		return fmt.Errorf("failed to join voice channel: %v", err)
-	}
-
 	return nil
 }
