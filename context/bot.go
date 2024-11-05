@@ -17,6 +17,7 @@ type Bot struct {
 }
 
 func NewBot(t string) (*Bot, error) {
+	// Discord API to retreive the session
 	d, err := discordgo.New("Bot " + t)
 	if err != nil {
 		return nil, err
@@ -55,6 +56,7 @@ func (b *Bot) addCommandsJSON() {
 }
 
 func (b *Bot) addSlashCommands() {
+	// This will send a POST request to register commands
 	for _, cmd := range b.commands {
 		_, err := b.Session.ApplicationCommandCreate(b.Session.State.User.ID, b.GuildID, cmd)
 		log.Printf("Currently adding command: '%v', with User ID: '%v' and GuildID: '%v'", cmd.ID, b.Session.State.User.ID, b.GuildID)
@@ -65,10 +67,10 @@ func (b *Bot) addSlashCommands() {
 }
 
 func (b *Bot) DeleteCommands() {
+	// Fetch all commands and delete them
 	existingCommands, err := b.Session.ApplicationCommands(b.Session.State.User.ID, b.GuildID)
 	if err != nil {
-		log.Fatalf("Did not fetch commands correctly.")
-		return
+		log.Fatalf("Did not fetch commands correctly.", err)
 	}
 	for _, cmd := range existingCommands {
 		err := b.Session.ApplicationCommandDelete(b.Session.State.User.ID, b.GuildID, cmd.ID)
@@ -77,4 +79,14 @@ func (b *Bot) DeleteCommands() {
 			log.Fatalf("Cannot delete '%v' command: %v", cmd.Name, err)
 		}
 	}
+}
+
+// Simple abstraction to easily print messages on discord.
+func (b *Bot) DisplayMessage(i *discordgo.InteractionCreate, c string) {
+	b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: c,
+		},
+	})
 }

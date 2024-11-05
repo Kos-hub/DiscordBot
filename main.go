@@ -38,79 +38,30 @@ func main() {
 	// Event handlers.
 	b.Session.AddHandler(handleInteraction)
 
-	// Discord API flags.
 	defer b.Session.Close()
 
 	log.Println("Bot is running. Press CTRL-C to exit.")
 
-	if b != nil {
-		log.Println("Bot is not null at this point.")
-	}
+	// Wait for stop command
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-stop
 
+	// CLEAN-UP
 	b.DeleteCommands()
 	log.Println("Closing bot...")
 }
 
 func handleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	//
-	//	if i.ApplicationCommandData().Name == "ping" {
-	//		err := joinUserVoiceChannel(s, i)
-	//
-	//		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-	//			Type: discordgo.InteractionResponseChannelMessageWithSource,
-	//			Data: &discordgo.InteractionResponseData{
-	//				Content: "Joined Channel",
-	//			},
-	//		})
-	//
-	//		if err != nil {
-	//			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-	//				Type: discordgo.InteractionResponseChannelMessageWithSource,
-	//				Data: &discordgo.InteractionResponseData{
-	//					Content: "Error: " + err.Error(),
-	//				},
-	//			})
-	//
-	//			return
-	//		}
-	//	}
-	//
-	//	if i.ApplicationCommandData().Name == "pong" {
-	//		err := leaveVoiceChannel()
-	//
-	//		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-	//			Type: discordgo.InteractionResponseChannelMessageWithSource,
-	//			Data: &discordgo.InteractionResponseData{
-	//				Content: "Left Channel",
-	//			},
-	//		})
-	//
-	//		if err != nil {
-	//			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-	//				Type: discordgo.InteractionResponseChannelMessageWithSource,
-	//				Data: &discordgo.InteractionResponseData{
-	//					Content: "Error: " + err.Error(),
-	//				},
-	//			})
-	//
-	//			return
-	//		}
-	//	}
-
 	value, exists := commands.Interactions[i.ApplicationCommandData().Name]
 
 	if !exists {
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Command doesn't exist",
-			},
-		})
+		log.Printf("Command does not exist")
 	} else {
-		value(i)
+		err := value(i)
+		if err != nil {
+			log.Printf("Error with interaction '%v', '%v'", i.ApplicationCommandData().Name, err)
+		}
 	}
 
 }
