@@ -13,7 +13,9 @@ var (
 
 func RegisterCommands(bot *ctx.Bot) {
 	Interactions = map[string]func(i *discordgo.InteractionCreate) error{
-		"join": JoinCommand,
+		"join":  JoinCommand,
+		"leave": LeaveCommand,
+		"help":  HelpCommand,
 	}
 	b = bot
 }

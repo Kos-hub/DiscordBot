@@ -2,5 +2,13 @@
     {
         "Name": "join",
         "Description": "Use this to make me join a channel"
+    },
+    {
+        "Name": "leave",
+        "Description": "Use this command to make me leave a channel"
+    },
+    {
+        "Name": "help",
+        "Description": "Use this command to display information about all commands"
     }
 ]

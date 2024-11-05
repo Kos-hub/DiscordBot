@@ -13,7 +13,7 @@ type Bot struct {
 	Session         *discordgo.Session         // Session
 	VoiceConnection *discordgo.VoiceConnection // Voice Chat
 	GuildID         string                     // Guild ID <- Specific server
-	commands        []*discordgo.ApplicationCommand
+	Commands        []*discordgo.ApplicationCommand
 }
 
 func NewBot(t string) (*Bot, error) {
@@ -49,7 +49,7 @@ func (b *Bot) addCommandsJSON() {
 		log.Fatalln("Could not load JSON,", err)
 	}
 
-	err = json.Unmarshal(data, &b.commands)
+	err = json.Unmarshal(data, &b.Commands)
 	if err != nil {
 		log.Fatalln("Could not unmarshal JSON,", err)
 	}
@@ -57,7 +57,7 @@ func (b *Bot) addCommandsJSON() {
 
 func (b *Bot) addSlashCommands() {
 	// This will send a POST request to register commands
-	for _, cmd := range b.commands {
+	for _, cmd := range b.Commands {
 		_, err := b.Session.ApplicationCommandCreate(b.Session.State.User.ID, b.GuildID, cmd)
 		log.Printf("Currently adding command: '%v', with User ID: '%v' and GuildID: '%v'", cmd.ID, b.Session.State.User.ID, b.GuildID)
 		if err != nil {
