@@ -1,24 +1,30 @@
 package commands
 
 import (
-	"errors"
-	"fmt"
-	"strings"
-
 	"github.com/bwmarrin/discordgo"
 )
 
 func HelpCommand(i *discordgo.InteractionCreate) error {
 
-	builder := new(strings.Builder)
+	embed := &discordgo.MessageEmbed{
+		Title:       "Help - Available commands",
+		Description: "Commands you can use with this bot:",
+		Color:       0x00ffcc,
+		Fields:      []*discordgo.MessageEmbedField{},
+	}
+	//builder := new(strings.Builder)
 	for _, c := range b.Commands {
-		builder.WriteString(fmt.Sprintf("/%s - %s\n", c.Name, c.Description))
+		//builder.WriteString(fmt.Sprintf("/%s - %s\n", c.Name, c.Description))
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   "/" + c.Name,
+			Value:  c.Description,
+			Inline: false,
+		})
 	}
 
-	if builder.Len() == 0 {
-		b.DisplayMessage(i, "No commands have been found")
-		return errors.New("could not find any commands to display")
+	_, err := b.Session.ChannelMessageSendEmbed(i.ChannelID, embed)
+	if err != nil {
+		return err
 	}
-	b.DisplayMessage(i, builder.String())
 	return nil
 }
