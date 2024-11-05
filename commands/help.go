@@ -4,11 +4,11 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func HelpCommand(i *discordgo.InteractionCreate) error {
+func HelpCommand(i *discordgo.InteractionCreate, args []string) error {
 
 	embed := &discordgo.MessageEmbed{
-		Title:       "Help - Available commands",
-		Description: "Commands you can use with this bot:",
+		Title:       "Help - Comandi disponibili",
+		Description: "Comandi chi poi utilizzari cu 'ssu bot",
 		Color:       0x00ffcc,
 		Fields:      []*discordgo.MessageEmbedField{},
 	}

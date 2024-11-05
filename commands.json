@@ -1,14 +1,25 @@
 [
     {
         "Name": "join",
-        "Description": "Use this to make me join a channel"
+        "Description": "L'usa su cumandu pemmu mi fai u trasi nto canali"
     },
     {
         "Name": "leave",
-        "Description": "Use this command to make me leave a channel"
+        "Description": "L'usa su comandu pemmu nesciu du canali"
     },
     {
         "Name": "help",
-        "Description": "Use this command to display information about all commands"
+        "Description": "L'usa su comandu mu ti mustri informazioni riguardu a tutti i cumandi"
+    },
+    {
+        "Name": "play",
+        "Description": "Mentu na canzuni da Youtube",
+        "Options": [
+            {
+                "Name": "search",
+                "Description": "Put link here",
+                "Type": 3
+            }
+        ]
     }
 ]

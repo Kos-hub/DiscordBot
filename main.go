@@ -3,7 +3,6 @@ package main
 import (
 	"discordbot/commands"
 	ctx "discordbot/context"
-	"errors"
 	"flag"
 	"log"
 	"os"
@@ -49,6 +48,7 @@ func main() {
 
 	// CLEAN-UP
 	b.DeleteCommands()
+	ResetFolder()
 	log.Println("Closing bot...")
 }
 
@@ -58,7 +58,13 @@ func handleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if !exists {
 		log.Printf("Command does not exist")
 	} else {
-		err := value(i)
+		options := i.ApplicationCommandData().Options
+		var args []string
+		for _, option := range options {
+
+			args = append(args, option.StringValue())
+		}
+		err := value(i, args)
 		if err != nil {
 			log.Printf("Error with interaction '%v', '%v'", i.ApplicationCommandData().Name, err)
 		}
@@ -66,14 +72,16 @@ func handleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 }
 
-func leaveVoiceChannel() error {
-
-	if b.VoiceConnection == nil {
-		return errors.New("not in a voice channel")
+func ResetFolder() error {
+	if err := os.RemoveAll("music"); err != nil {
+		log.Printf("Error removing folder: %w", err)
+		return err
 	}
 
-	b.VoiceConnection.Disconnect()
+	if err := os.MkdirAll("music", os.ModePerm); err != nil {
+		log.Printf("Error recreating folder: %w", err)
+		return err
+	}
 
-	b.VoiceConnection = nil // clean-up the pointer to the voice connection
 	return nil
 }

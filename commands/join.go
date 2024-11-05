@@ -4,16 +4,16 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func JoinCommand(i *discordgo.InteractionCreate) error {
+func JoinCommand(i *discordgo.InteractionCreate, args []string) error {
 	// Check if bot is in a voice channel
 	if b.VoiceConnection != nil {
-		b.DisplayMessage(i, "Already in voice channel!")
+		b.DisplayMessage(i, "Sugnu gia' nto canali")
 	}
 	userID := i.Member.User.ID
 
 	voiceState, err := b.Session.State.VoiceState(b.GuildID, userID)
 	if err != nil {
-		b.DisplayMessage(i, "You have to be in a voice channel for me to join.")
+		b.DisplayMessage(i, "Ndai u si nta nu canali vocali pemmu pozzu trasiri")
 		return err
 	}
 
@@ -21,10 +21,10 @@ func JoinCommand(i *discordgo.InteractionCreate) error {
 	vc, err := b.Session.ChannelVoiceJoin(b.GuildID, voiceState.ChannelID, false, true)
 	b.VoiceConnection = vc
 	if err != nil {
-		b.DisplayMessage(i, "Failed to join channel")
+		b.DisplayMessage(i, "Non pozzu trasiri")
 	}
 
-	b.DisplayMessage(i, "Joined Voice channel!")
+	b.DisplayMessage(i, "Trasivi nto canali vocali")
 
 	return nil
 

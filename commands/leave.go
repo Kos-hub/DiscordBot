@@ -6,15 +6,15 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func LeaveCommand(i *discordgo.InteractionCreate) error {
+func LeaveCommand(i *discordgo.InteractionCreate, args []string) error {
 	if b.VoiceConnection == nil {
-		b.DisplayMessage(i, "I'm not in a voice channel")
+		b.DisplayMessage(i, "Non sugnu nta nu canali vocali")
 		return errors.New("not in a voice channel")
 	}
 
 	b.VoiceConnection.Disconnect()
 
-	b.DisplayMessage(i, "Left the channel!")
+	b.DisplayMessage(i, "Nescivi du canali")
 	b.VoiceConnection = nil // clean-up the pointer to the voice connection
 	return nil
 }
