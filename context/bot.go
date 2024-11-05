@@ -1,7 +1,9 @@
 package ctx
 
 import (
+	"encoding/json"
 	"log"
+	"os"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -11,6 +13,7 @@ type Bot struct {
 	Session         *discordgo.Session         // Session
 	VoiceConnection *discordgo.VoiceConnection // Voice Chat
 	GuildID         string                     // Guild ID <- Specific server
+	commands        []*discordgo.ApplicationCommand
 }
 
 func NewBot(t string) (*Bot, error) {
@@ -28,7 +31,37 @@ func NewBot(t string) (*Bot, error) {
 		GuildID:         "523889328863051802",
 	}
 
+	err = b.Session.Open()
+	if err != nil {
+		log.Fatalln("Error opening connection,", err)
+	}
+
+	b.addCommandsJSON()
+	b.addSlashCommands()
+
 	return b, nil
+}
+
+func (b *Bot) addCommandsJSON() {
+	data, err := os.ReadFile("commands.json")
+	if err != nil {
+		log.Fatalln("Could not load JSON,", err)
+	}
+
+	err = json.Unmarshal(data, &b.commands)
+	if err != nil {
+		log.Fatalln("Could not unmarshal JSON,", err)
+	}
+}
+
+func (b *Bot) addSlashCommands() {
+	for _, cmd := range b.commands {
+		_, err := b.Session.ApplicationCommandCreate(b.Session.State.User.ID, b.GuildID, cmd)
+		log.Printf("Currently adding command: '%v', with User ID: '%v' and GuildID: '%v'", cmd.ID, b.Session.State.User.ID, b.GuildID)
+		if err != nil {
+			log.Fatalf("Cannot create '%v' command: %v", cmd.Name, err)
+		}
+	}
 }
 
 func (b *Bot) DeleteCommands() {

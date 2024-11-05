@@ -1,0 +1,10 @@
+[
+    {
+        "Name": "ping",
+        "Description": "Ping!"
+    },
+    {
+        "Name": "pong",
+        "Description": "Pong!"
+    }
+]

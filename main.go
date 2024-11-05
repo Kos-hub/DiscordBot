@@ -36,32 +36,9 @@ func main() {
 	// Event handlers.
 	b.Session.AddHandler(handleInteraction)
 
-	commands := []*discordgo.ApplicationCommand{
-		{
-			Name:        "ping",
-			Description: "Ping!",
-		},
-		{
-			Name:        "pong",
-			Description: "Pong!",
-		},
-	}
 	// Discord API flags.
-	err = b.Session.Open()
-	if err != nil {
-		log.Fatalln("Error opening connection,", err)
-	}
 	defer b.Session.Close()
 
-	b.DeleteCommands()
-
-	for _, cmd := range commands {
-		_, err := b.Session.ApplicationCommandCreate(b.Session.State.User.ID, b.GuildID, cmd)
-		log.Printf("Currently adding command: '%v', with User ID: '%v' and GuildID: '%v'", cmd.ID, b.Session.State.User.ID, b.GuildID)
-		if err != nil {
-			log.Fatalf("Cannot create '%v' command: %v", cmd.Name, err)
-		}
-	}
 	log.Println("Bot is running. Press CTRL-C to exit.")
 
 	stop := make(chan os.Signal, 1)
@@ -73,13 +50,14 @@ func main() {
 }
 
 func handleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
+
 	if i.ApplicationCommandData().Name == "ping" {
 		err := joinUserVoiceChannel(s, i)
 
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "Joined Channel.",
+				Content: "Joined Channel",
 			},
 		})
 
