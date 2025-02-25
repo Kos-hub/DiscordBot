@@ -5,10 +5,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"log"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"layeh.com/gopus"
@@ -21,7 +21,10 @@ const (
 	MAX_BYTES  int = (FRAME_SIZE * 2) * 2
 )
 
-var queue Queue
+var (
+	dq    Queue
+	alive bool
+)
 
 func PlayCommand(i *discordgo.InteractionCreate, args []string) error {
 	// Getting the link from the slash command
@@ -29,21 +32,43 @@ func PlayCommand(i *discordgo.InteractionCreate, args []string) error {
 		return errors.New("no arguments are passed!")
 	}
 	b.DisplayMessage(i, args[0])
-	queue.Push(args[0])
 
-	for !queue.IsEmpty() {
-		// Download the song from ytdl
-		log.Printf("Queue is not empty. about to download song...")
-		downloadSong(queue.Pop())
+	if !alive {
+		dq.Push(args[0])
+		playChan := make(chan string, 10)
+		alive = true
+		go downloadQueue(playChan)
+		go playAudio(playChan)
+	} else {
+		dq.Push(args[0])
 	}
-
-	// Reproduce music
-	go playAudio()
 
 	return nil
 }
 
-func downloadSong(url string) error {
+func downloadQueue(playChan chan string) {
+	for {
+		if dq.IsEmpty() {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		log.Printf("Queue is not empty. about to download song...")
+		title, err := downloadSong(dq.Pop())
+		if err != nil {
+			continue
+		}
+
+		playChan <- title
+		<-playChan
+
+	}
+}
+
+func downloadSong(url string) (string, error) {
+	log.Println("Started downlading song...")
+
+	// Actual song download
 	cmd := exec.Command("./yt-dlp",
 		"-x",
 		"--audio-format", "mp3",
@@ -52,87 +77,80 @@ func downloadSong(url string) error {
 		"--output", "music/%(title)s.%(ext)s",
 		url,
 	)
-
 	err := cmd.Run()
-
-	log.Println("Started downlading song...")
 	if err != nil {
 		log.Printf("Error downloading song: %v", err)
-		return err
+		return "", err
 	}
 
-	return nil
+	// Second call to retreive title - Might be able to get metadata from prev command
+	output, err := exec.Command("./yt-dlp",
+		"--print", "title",
+		"--no-warning",
+		url,
+	).CombinedOutput()
+
+	if err != nil {
+		log.Printf("Error printing title: %v", err)
+	}
+
+	log.Printf("------------")
+	return string(output[:]), nil
 }
 
-func getFirstFile() string {
+func playAudio(playChan chan string) {
+	log.Printf("Started audio goroutine.")
+	for s := range playChan {
+		log.Printf("Song received.")
+		// Execute ffmpeg on mp3 file
+		song := strings.TrimSuffix(s, "\n")
+		cmd := exec.Command("ffmpeg", "-i", "music\\"+song+".mp3", "-f", "s16le", "-ar", strconv.Itoa(FRAME_RATE), "-ac", strconv.Itoa(CHANNELS), "pipe:1")
 
-	files, err := os.ReadDir("music")
-	if err != nil {
-		log.Printf("Error opening folder, %w", err)
-		return ""
-	}
+		// Read ffmpeg output
+		pipe, err := cmd.StdoutPipe()
 
-	for _, file := range files {
-		if !file.IsDir() {
-			return filepath.Join("music", file.Name())
+		// Create buffer for ffmpeg output
+		buf := bufio.NewReaderSize(pipe, 16384)
+
+		if err != nil {
+			return
 		}
-	}
 
-	return ""
-}
+		if err := cmd.Start(); err != nil {
+			return
+		}
 
-func playAudio() {
-	// Execute ffmpeg on mp3 file
-	cmd := exec.Command("ffmpeg", "-i", getFirstFile(), "-f", "s16le", "-ar", strconv.Itoa(FRAME_RATE), "-ac", strconv.Itoa(CHANNELS), "pipe:1")
+		b.VoiceConnection.Speaking(true)
 
-	log.Println("Starting ffmpeg data streaming.")
+		// Create encoder for opus
+		encoder, err := gopus.NewEncoder(FRAME_RATE, CHANNELS, gopus.Audio)
 
-	// Read ffmpeg output
-	pipe, err := cmd.StdoutPipe()
+		if err != nil {
+			log.Printf("Error creating encoder %w", err)
+		}
 
-	// Create buffer for ffmpeg output
-	buf := bufio.NewReaderSize(pipe, 16384)
+		go func() {
+			for {
+				// Create buffer for opus
+				audioBuf := make([]int16, FRAME_SIZE*CHANNELS)
 
-	log.Println("Created buffer for streaming")
-	if err != nil {
-		return
-	}
+				// Read from ffmpeg to discord buffer
+				err := binary.Read(buf, binary.LittleEndian, &audioBuf)
+				if err != nil {
+					playChan <- ""
+					break
+				}
 
-	if err := cmd.Start(); err != nil {
-		return
-	}
+				// Encode from audio buffer
+				opus, err := encoder.Encode(audioBuf, FRAME_SIZE, MAX_BYTES)
 
-	b.VoiceConnection.Speaking(true)
-
-	// Create encoder for opus
-	encoder, err := gopus.NewEncoder(FRAME_RATE, CHANNELS, gopus.Audio)
-	log.Println("Created encoder")
-
-	if err != nil {
-		log.Printf("Error creating encoder %w", err)
-	}
-
-	go func() {
-		for {
-			// Create buffer for opus
-			audioBuf := make([]int16, FRAME_SIZE*CHANNELS)
-
-			// Read from ffmpeg to discord buffer
-			err := binary.Read(buf, binary.LittleEndian, &audioBuf)
-			log.Println("Read from buffer. Audio buffer is now:", audioBuf)
-			if err != nil {
-				break
+				// Send packet back to opus
+				b.VoiceConnection.OpusSend <- opus
 			}
+		}()
+		b.VoiceConnection.Speaking(false)
 
-			// Encode from audio buffer
-			opus, err := encoder.Encode(audioBuf, FRAME_SIZE, MAX_BYTES)
-
-			log.Println("Encoded OPUS string is:", opus)
-			// Send packet back to opus
-			b.VoiceConnection.OpusSend <- opus
-		}
-	}()
-	b.VoiceConnection.Speaking(false)
-
-	cmd.Wait()
+		cmd.Wait()
+	}
+	log.Printf("Finished goroutine.")
 }

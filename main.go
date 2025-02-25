@@ -4,6 +4,7 @@ import (
 	"discordbot/commands"
 	ctx "discordbot/context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -24,7 +25,7 @@ func init() {
 }
 
 func main() {
-
+	ResetFolder()
 	// Initialize the bot
 	b, err := ctx.NewBot(Token)
 	if err != nil {
@@ -36,6 +37,7 @@ func main() {
 
 	// Event handlers.
 	b.Session.AddHandler(handleInteraction)
+	b.Session.AddHandler(voiceStateUpdate)
 
 	defer b.Session.Close()
 
@@ -52,6 +54,14 @@ func main() {
 	log.Println("Closing bot...")
 }
 
+func voiceStateUpdate(s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
+	if vs.UserID == s.State.User.ID {
+		if vs.ChannelID == "" {
+			fmt.Println("Bot has been disconnected")
+			ResetFolder()
+		}
+	}
+}
 func handleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	value, exists := commands.Interactions[i.ApplicationCommandData().Name]
 
