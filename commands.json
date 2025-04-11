@@ -21,5 +21,9 @@
                 "Type": 3
             }
         ]
+    },
+    {
+        "Name": "skip",
+        "Description": "Skip song"
     }
 ]

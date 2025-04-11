@@ -17,6 +17,7 @@ func RegisterCommands(bot *ctx.Bot) {
 		"leave": LeaveCommand,
 		"help":  HelpCommand,
 		"play":  PlayCommand,
+		"skip":  SkipCommand,
 	}
 	b = bot
 }
